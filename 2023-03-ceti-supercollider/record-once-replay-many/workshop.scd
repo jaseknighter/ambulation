@@ -419,7 +419,6 @@ r.(6); // ..
 
 
 
-
 //////// 17 ////////
 // __   __  _______  _______
 // |  | |  ||  _    ||       |
@@ -433,14 +432,24 @@ r.(6); // ..
 // it is a "macrogranulator" that modulates all sorts of things of buffers
 // and does recording/playback with the buffers
 //
-// before running this you must first save `Ube.sc` to the extensions directory.
+// two important setup notes:
+// 1. before running this you must first save `Ube.sc` to the extensions directory.
 // open `Ube.sc` in SuperCollider.
 // now save it by doing `File -> Save As Extension...` and type `Ube.sc`.
+// 2. also, for this version of UBE, FluCoMa needs to be installed...
+// see instructions here: https://learn.flucoma.org/installation/sc/
 
-// to run this code, but a cursor anywhere in the code block (a code block is enclosed in parentheses)
+// after running the above two setup steps, to run this code, put a cursor
+// anywhere in the code block (a code block is enclosed in parentheses)
 // and hit <Ctrl>+Enter
 
+// note from jaseknighter: this version of ube adds two GrainBuf granulators
+// to the audio path generated from whatever each player is currently playing.
+// these size of the GrainBuf grains are controlled by the X location of the mouse.
+
 // if you run into trouble, restart everything <Ctrl>+<Shift>+L and then <Ctrl>+Enter
+
+// run this code first to define the looper
 (
 s.waitForBoot({
 	var pairs;
@@ -448,13 +457,26 @@ s.waitForBoot({
 	// define the "looper"
 	SynthDef("looper",{
 		// main arguments
-		arg buf,tape,player,baseRate=1.0,amp=1.0,timescale=0.2;
+		arg buf,monobuf0,monobuf1,tape,player,baseRate=1.0,amp=1.0,timescale=0.2,
+		rand1=Rand(30,60),
+		rand2=Rand(hi:2*pi),
+		rand3=Rand(60,120),
+		rand4=Rand(hi:2*pi),
+		rand5=Rand(5,15),
+		rand6=Drand([0,1],inf),
+		rand7=Rand(10,30),
+		rand8=Rand(hi:2*pi),
+		rand9=Rand(10,30),
+		rand10=Rand(hi:2*pi),
+		gate=1;
+		// winPct
 		// variables to store UGens later
 		var volume;
 		var switch=0,snd,snd1,snd2,pos,pos1,pos2,posStart,posEnd,index;
 		// store the number of frames and the duraiton
 		var frames=BufFrames.kr(buf);
 		var duration=BufDur.kr(buf);
+		var gBuf, grain0, grain1, gEnv0, gEnv1;
 
 
 
@@ -462,24 +484,25 @@ s.waitForBoot({
 		// ----- START ADDING YOUR OWN MODULATION HERE ----- //
 		///////////////////////////////////////////////////////
 
-
 		// LFO for the start point
-		var lfoStart=SinOsc.kr(timescale/Rand(30,60),Rand(hi:2*pi)).range(1024,frames-10240);
+		var lfoStart=SinOsc.kr(timescale/rand1,rand2).range(1024,frames-10240);
 
-		// LFO for the window lenth
-		var lfoWindow=SinOsc.kr(timescale/Rand(60,120),Rand(hi:2*pi)).range(4096,frames/2);
+		// LFO for the window length
+		var lfoWindow=SinOsc.kr(timescale/rand3,rand4).range(4096,frames/2);
 
 		// LFO for the rate (right now its not an LFO)
 		var lfoRate=baseRate;
 
 		// LFO for switching between forward and reverse
-		var lfoForward=Demand.kr(Impulse.kr(timescale/Rand(5,15)),0,Drand([0,1],inf));
+		var lfoForward=Demand.kr(Impulse.kr(timescale/rand5),0,rand6);
 
 		// LFO for the volume
-		var lfoAmp=SinOsc.kr(timescale/Rand(10,30),Rand(hi:2*pi)).range(0.05,0.5);
+		var lfoAmp=SinOsc.kr(timescale/rand7,rand8).range(0.05,0.5);
+		// var lfoAmp=SinOsc.kr(timescale/Rand(10,30),Rand(hi:2*pi)).range(0.05,1);
 
 		// LFO for the panning
-		var lfoPan=SinOsc.kr(timescale/Rand(10,30),Rand(hi:2*pi)).range(-1,1);
+		var lfoPan=SinOsc.kr(timescale/rand9,rand10).range(-1,1);
+
 
 
 		///////////////////////////////////////////////////////
@@ -498,9 +521,11 @@ s.waitForBoot({
 		// LocalIn collects the a trigger whenever the playhead leaves the window
 		switch=ToggleFF.kr(LocalIn.kr(1));
 
+
 		// playhead 1 has a play position and buffer reader
 		pos1=Phasor.ar(trig:1-switch,rate:rate,end:frames,resetPos:((lfoForward>0)*posStart)+((lfoForward<1)*posEnd));
 		snd1=BufRd.ar(2,buf,pos1,1.0,4);
+
 
 		// playhead 2 has a play position and buffer reader
 		pos2=Phasor.ar(trig:switch,  rate:rate,end:frames,resetPos:((lfoForward>0)*posStart)+((lfoForward<1)*posEnd));
@@ -525,17 +550,41 @@ s.waitForBoot({
 		// send data to the GUI
 		SendReply.kr(Impulse.kr(25),"/position",[tape,player,posStart/frames,posEnd/frames,pos/frames,volume,(lfoPan+1)/2]);
 
+		gEnv0 = EnvGen.kr(
+        Env([0, 1, 0], [1, 1], \sin, 1),
+        gate,
+        levelScale: 1,
+        doneAction: Done.freeSelf);
+		gEnv1 = EnvGen.kr(
+        Env([0, 1, 0], [1, 1], \sin, 1),
+        gate,
+        levelScale: 1,
+        doneAction: Done.freeSelf);
+
+		grain0 = GrainBuf.ar(2, Impulse.kr(10), MouseX.kr(0.05,1), monobuf0, rate, pos1, 2, 0, -1) * gEnv0;
+		grain1 = GrainBuf.ar(2, Impulse.kr(10), MouseX.kr(0.05,1), monobuf1, rate, pos1, 2, 0, -1) * gEnv1;
+
 		// do the panning
-		snd=Balance2.ar(snd[0],snd[1],lfoPan);
+		// snd=Balance2.ar(grain0,grain1,lfoPan);
+		// snd=Balance2.ar(snd[0],snd[1],lfoPan);
+		snd=Balance2.ar(grain0+snd[0],grain1+snd[1],lfoPan);
+		// snd=Balance2.ar(snd[0],grain1+snd[1],lfoPan);
+
 
 		///////////////////////////////////////////////////////
 		// --------- START ADDING ANY EFFECTS HERE --------- //
 		///////////////////////////////////////////////////////
+		snd = CombC.ar(snd,0.5,SinOsc.ar(0.01).range(1,1.5),3);
 
-		snd = CombC.ar(snd,0.5,Rand(0.05,0.5),2); // random delay
+		// snd = CombC.ar(snd,0.5,SinOsc.ar(MouseX.kr(0.01,0.09),0.1).range(0.1,0.3),MouseX.kr(0.01,0.09));
+		// snd = CombC.ar(snd,0.5,0.1,5)*SinOsc.ar(MouseX.kr(5)); // random delay
+		// snd = CombC.ar(snd,0.5,Rand(0.05,0.5),5); // random delay
 		// snd = LPF.ar(snd,SinOsc.kr(0.1).exprange(20,2000)); // modulated filter
 		// snd = (snd * MouseX.kr(1,10)).tanh / 2; // mouse-controlled distortion
 		// ?????
+
+
+
 
 		///////////////////////////////////////////////////////
 		// -------=-- DONE ADDING ANY EFFECTS HERE --------- //
@@ -543,6 +592,7 @@ s.waitForBoot({
 
 		// final output
 		Out.ar(0,snd*volume/5);
+		// Out.ar(0,snd*volume*2);
 	}).send(s);
 
 	// basic players
@@ -557,25 +607,26 @@ s.waitForBoot({
 
 		// collect the sound coming from the bus "0" on 2 channels (stereo)
 		var snd=In.ar(0,2);
-
+		var roomSize=SinOsc.kr(1).range(0,1);
 		///////////////////////////////////////////////////////
 		// ----- START ADDING YOUR GLOBAL EFFECTS HERE ----- //
 		///////////////////////////////////////////////////////
 
 		// add some nice tape compression
-		// snd = AnalogTape.ar(snd,0.9,0.8,0.9,2);
-
+		snd = AnalogTape.ar(snd,0.9,MouseX.kr(0,1.3),0.5,2);
 		// add some delay
-		snd = CombC.ar(snd,0.5,delaytime:0.25,decaytime:1.1);
+		// snd = CombC.ar(snd,0.5,delaytime:0.25,decaytime:1.1);
+		// snd = CombC.ar(snd,0.5,delaytime:0.25*MouseY.kr(0.01,2),decaytime:1.1);
+		// snd = CombC.ar(snd,0.5,delaytime:MouseY.kr(0.1,0.5),decaytime:5);
 
 		// add some reverb
 		snd = SelectX.ar(LFNoise2.kr(1/3).range(0.1,0.5),[
 			snd,
-			FreeVerb2.ar(snd[0],snd[1],50)
+			FreeVerb2.ar(snd[0],snd[1],50,roomSize)
 			//Fverb.ar(snd[0],snd[1],50,decay:LFNoise2.kr(1/3).range(70,90))
 		]);
 
-		// // add some analog chewing (PortedPlugins needed)
+		// add some analog chewing (PortedPlugins needed)
 		// snd = SelectX.ar(LFNoise2.kr(1/3).range(0,1),[
 		// 	snd,
 		// 	AnalogChew.ar(snd);
@@ -585,37 +636,65 @@ s.waitForBoot({
 		// ----- DONE ADDING YOUR GLOBAL EFFECTS HERE ------ //
 		///////////////////////////////////////////////////////
 
+		snd = snd*Lag.kr(amp);
 		// replace the output with the effected output
-		ReplaceOut.ar(0,snd*Lag.kr(amp));
+
+		ReplaceOut.ar(0,snd);
 	}).send(s);
 
 	// load the ube class
 	u=Ube.new(Server.default);
 
-	Routine {
-		// either load a file into the tape
-		u.loadTape(tape:1,filename:thisProcess.nowExecutingPath.dirname++"/kalimba.wav");
-		// OR record another tape and play it
-		// u.recordTape(tape:1,seconds:3,recLevel:2); 3.5.wait;
-
-		0.5.wait; // give time for buffer to load
-		// create players to play the tape
-		u.playTape(tape:1,player:0,rate:1,db:0,timescale:1);
-		u.playTape(tape:1,player:1,rate:0.5,db:3,timescale:1.0);
-		u.playTape(tape:1,player:2,rate:0.25,db:6,timescale:1.0);
-		u.playTape(tape:1,player:3,rate:0.125,db:9,timescale:1.0);
-		u.playTape(tape:1,player:4,rate:2,db:-6,timescale:1.0);
-		u.playTape(tape:1,player:5,rate:4,db:-12,timescale:1.0);
-		// show gui
-		u.gui;
-
-	}.play;
-
-
 
 });
 )
 
-// TRY IT! load your own sounds, record your own sounds
-// change the modulation, change the effects
+// run this code block to record from your sound input device
+(
+Routine{
+	u.recordTape(tape:1,seconds:3,recLevel:4); 3.5.wait;
+	u.playTape(tape:1,player:1,rate:0.5,db:5,timescale:1.0);
+	u.playTape(tape:1,player:2,rate:0.25,db:5,timescale:1.0);
+	u.playTape(tape:1,player:3,rate:0.125,db:5,timescale:1.0);
+	u.playTape(tape:1,player:4,rate:2,db:-20,timescale:1.0);
+	u.playTape(tape:1,player:5,rate:40,db:-20,timescale:10.0);
+	u.gui;
+}.play;
+)
+
+// run this code block to load a file
+// note: if you want to add additional files, you can find the folder by executing:
+//      thisProcess.nowExecutingPath.dirname;
+(
+Routine {
+	u.loadTape(tape:1,filename:thisProcess.nowExecutingPath.dirname++"/flora_wowless.wav");
+	1.wait; // give time for buffer to load
+	u.playTape(tape:1,player:1,rate:0.5,db:5,timescale:1.0);
+	u.playTape(tape:1,player:2,rate:0.25,db:5,timescale:1.0);
+	u.playTape(tape:1,player:3,rate:0.125,db:5,timescale:1.0);
+	u.playTape(tape:1,player:4,rate:2,db:-20,timescale:1.0);
+	u.playTape(tape:1,player:5,rate:40,db:-20,timescale:10.0);
+  u.gui;
+}.play;
+)
+
+u.setRate(tape:1,player:1,rate:-5);
+u.setTimescale(tape:1,player:1,timescale:2);
+u.pausePlayer(tape:1,player:1,val:1);
+u.restartPlayer(tape:1,player:1,val:1);
+
+// u.setRX functions change various settings for the looper
+// (see the looper SynthDef above for details)
+// each function only applies to a single player (by default there are 5 players running for tape 1)
+u.setR1(tape:1,player:1,val:10); // LFO param for start point (default: `Rand(30,60)`)
+u.setR2(tape:1,player:1,val:10); // LFO param for start point (default: `Rand(hi:2*pi)`)
+u.setR3(tape:1,player:1,val:1); // LFO param for the window length (default: `Rand(60,120)`)
+u.setR4(tape:1,player:1,val:1); // LFO param for the window length (default: `Rand(hi:2*pi)`)
+u.setR5(tape:1,player:1,val:1); // LFO for switching between forward and reverse (default: `Rand(5,15)`)
+u.setR6(tape:1,player:1,val:1); // LFO for switching between forward and reverse (default: `Drand([0,1],inf)`)
+u.setR7(tape:1,player:1,val:1); // LFO for the volume (default: `Rand(10,30)`)
+u.setR8(tape:1,player:1,val:1); // LFO for the volume (default: `Rand(hi:2*pi)`)
+u.setR9(tape:1,player:1,val:1); // LFO for the panning (default: `Rand(10,30)`)
+u.setR10(tape:1,player:1,val:1); // LFO for the panning (default: `Rand(hi:2*pi)`)
+
 

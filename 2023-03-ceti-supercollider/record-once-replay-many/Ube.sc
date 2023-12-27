@@ -64,8 +64,13 @@ Ube {
 		if (bufs.at(tapeid).isNil,{
 			("[ube] cannot play empty tape"+tape).postln;
 			^0
-		});
+		}{
 		("[ube] player"+player+"playing tape"+tape).postln;
+		});
+
+		if (syns.at(playid).notNil){
+			("not nil").postln;
+		}
 
 		syns.put(playid,Synth.head(server,"looper",[\tape,tape,\player,player,\buf,bufs.at(tapeid),\baseRate,rate,\amp,amp,\timescale,timescale]).onFree({
 			("[ube] player"+player+"finished.").postln;
@@ -186,7 +191,7 @@ Ube {
 						a.drawsBoundingLines = false;
 						a.peakColor=Color.new255(99,89,133,150);
 						a.rmsColor=Color.new255(99,89,133,60);
-						a.background_(Color.new255(236,242,255,0));
+						// a.background_(Color.new255(236,242,255,0));
 					});
 
 				},{
