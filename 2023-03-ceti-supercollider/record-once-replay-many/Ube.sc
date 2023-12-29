@@ -88,11 +88,67 @@ Ube {
 		syns.at(playid).set(\rand1,val);
 	}
 
+	setR2 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand2,val);
+	}
+
 	setR3 {
 		arg tape=1,player=1,val=1.0;
 		var tapeid="tape"++tape;
 		var playid="player"++player++tapeid;
 		syns.at(playid).set(\rand3,val);
+	}
+
+		setR4 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand4,val);
+	}
+
+		setR5 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand5,val);
+	}
+
+		setR6 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand6,val);
+	}
+
+		setR7 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand7,val);
+	}
+
+		setR8 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand8,val);
+	}
+
+		setR9 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand9,val);
+	}
+
+		setR10 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand10,val);
 	}
 
 	setArg {
