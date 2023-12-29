@@ -2,6 +2,7 @@ Ube {
 
 	var server;
 	var bufs;
+  var monobufs;
 	var oscs;
 	var <syns;
 	var win;
@@ -20,6 +21,7 @@ Ube {
 
 		// initialize variables
 		bufs = Dictionary.new();
+		monobufs = Dictionary.new();    
 		syns = Dictionary.new();
 		oscs = Dictionary.new();
 		windata = Array.newClear(128);
@@ -54,28 +56,109 @@ Ube {
 
 		"done loading.".postln;
 	}
+  
+	pauseTape {
+		arg tape=1,player=1;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		("pause").postln;
+		syns.at(playid).run(false);
+	}
+
+	restartTape {
+		arg tape=1,player=1;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		("restart").postln;
+		syns.at(playid).run(true);
+	}
+
+	setRate {
+		arg tape=1,player=1,rate=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		("set rate").postln;
+		syns.at(playid).set(\baseRate,rate);
+	}
+
+	setR1 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand1,val);
+	}
+
+	setR3 {
+		arg tape=1,player=1,val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		syns.at(playid).set(\rand3,val);
+	}
+
+	setArg {
+		arg tape=1,player=1,synsarg="\rate",val=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		("set arg: "++ synsarg ++ " :" ++val).postln;
+		syns.at(playid).set(synsarg,val);
+	}
+
+	setTimescale {
+		arg tape=1,player=1,timescale=1.0;
+		var tapeid="tape"++tape;
+		var playid="player"++player++tapeid;
+		("set timescale").postln;
+		syns.at(playid).set(\timescale,timescale);
+	}
 
 	playTape {
 		arg tape=1,player=1,rate=1.0,db=0.0,timescale=1;
 		var amp=db.dbamp;
 		var tapeid="tape"++tape;
 		var playid="player"++player++tapeid;
+    var buf=bufs.at(tapeid);
+    var bufl, bufr;
 
-		if (bufs.at(tapeid).isNil,{
+		if (buf.isNil,{
 			("[ube] cannot play empty tape"+tape).postln;
 			^0
-		}{
-		("[ube] player"+player+"playing tape"+tape).postln;
 		});
+		("[ube] player"+player+"playing tape"+tape).postln;
 
-		if (syns.at(playid).notNil){
-			("not nil").postln;
-		}
+		if (syns.at(playid).notNil,{
+			("syns.at is not nil").postln;
+			syns.at(playid).free;
+			// syns.removeAt(playid);
+			syns.put(playid,Synth.head(server,"looper",[\tape,tape,\player,player,\buf,buf,\baseRate,rate,\amp,amp,\timescale,timescale]).onFree({
+          ("[ube] player"+player+"finished.").postln;
+		    }));
+		},{
+			("syns.at is nil").postln;
+        // new code to split stereo buffer into two mono bufs from: https://scsynth.org/t/load-stereo-file-to-mono-buffer/5043/2
+        if (monobufs.at(tapeid).isNil,{
+          fork{
+            ("monobufs is nil. split the stereo file: ").postln;
+            bufl=Buffer.alloc(server, buf.sampleRate*(buf.numFrames/2)); 
+            bufr=Buffer.alloc(server, buf.sampleRate*(buf.numFrames/2));
+            FluidBufCompose.processBlocking(server,source:buf,destination:bufl,startChan:0,numChans:1,action:{
+              FluidBufCompose.processBlocking(server,source:buf,destination:bufr,startChan:1,numChans:1,action:{
+                syns.put(playid,Synth.head(server,"looper",[\tape,tape,\player,player,\buf,buf,\monobuf0,bufl,\monobuf1,bufr,\baseRate,rate,\amp,amp,\timescale,timescale]).onFree({
+                  ("[ube] player"+player+"finished with two mono bufs created.").postln;
+                }));
+                NodeWatcher.register(syns.at(playid));
 
-		syns.put(playid,Synth.head(server,"looper",[\tape,tape,\player,player,\buf,bufs.at(tapeid),\baseRate,rate,\amp,amp,\timescale,timescale]).onFree({
-			("[ube] player"+player+"finished.").postln;
-		}));
-		NodeWatcher.register(syns.at(playid));
+              });
+            });
+
+          }
+        },{
+          syns.put(playid,Synth.head(server,"looper",[\tape,tape,\player,player,\buf,bufs.at(tapeid),\monobuf0,monobufs.at(tapeid)[0],\monobuf1,monobufs.at(tapeid)[1],\baseRate,rate,\amp,amp,\timescale,timescale]).onFree({
+            ("[ube] player"+player+"finished.").postln;
+          }));
+          NodeWatcher.register(syns.at(playid));
+
+        });
+		});
 	}
 
 	loadTape {
@@ -85,6 +168,11 @@ Ube {
 			("[ube] error: need to provide filename").postln;
 			^nil
 		});
+		monobufs.put(tapeid,[Buffer.readChannel(server,filename,channels:0,action:{ arg buf;
+			("[ube] mono buffer 0 loaded"+tape+filename).postln;
+		}),Buffer.readChannel(server,filename,channels:1,action:{ arg buf;
+			("[ube] mono buffer 1 loaded"+tape+filename).postln;
+		})]);    
 		bufs.put(tapeid,Buffer.read(server,filename,action:{ arg buf;
 			("[ube] loaded"+tape+filename).postln;
 		}));
@@ -93,6 +181,7 @@ Ube {
 	recordTape {
 		arg tape=1,seconds=30,recLevel=1.0;
 		var tapeid="tape"++tape;
+		("record tape").postln;    
 		Buffer.alloc(server,server.sampleRate*seconds,2,{ arg buf;
 			// silence all output to prevent feedback?
 			syns.at("fx").set(\amp,0);
@@ -191,7 +280,7 @@ Ube {
 						a.drawsBoundingLines = false;
 						a.peakColor=Color.new255(99,89,133,150);
 						a.rmsColor=Color.new255(99,89,133,60);
-						// a.background_(Color.new255(236,242,255,0));
+						a.background_(Color.new255(236,242,255,0));
 					});
 
 				},{
@@ -202,7 +291,7 @@ Ube {
 				windata.do{ arg v,j;
 					var i=j+1;
 					if (v.notNil,{
-						var y=padding+(i*availableHeight);
+						var y=padding+(i*availableHeight)-80;
 						var posStart=v[1];
 						var posEnd=v[2];
 						var posWidth=(v[2]-v[1]);
@@ -212,7 +301,7 @@ Ube {
 						var volume01=volume.ampdb.linlin(-96,12,0,1)+0.001;
 						var cc=Color.new255(99,89,133,255*volume01);
 						// var cc=Color.new255(96,150,180,255*volume01);
-
+            // ("y: "++y).postln;
 						// draw waveform area
 						Pen.color = cc;
 						Pen.addRect(
@@ -262,4 +351,3 @@ Ube {
 		});
 	}
 }
-
