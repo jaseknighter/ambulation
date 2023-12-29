@@ -458,16 +458,16 @@ s.waitForBoot({
 	SynthDef("looper",{
 		// main arguments
 		arg buf,monobuf0,monobuf1,tape,player,baseRate=1.0,amp=1.0,timescale=0.2,
-		rand1=Rand(30,60),
-		rand2=Rand(hi:2*pi),
-		rand3=Rand(60,120),
-		rand4=Rand(hi:2*pi),
-		rand5=Rand(5,15),
-		rand6=Drand([0,1],inf),
-		rand7=Rand(10,30),
-		rand8=Rand(hi:2*pi),
-		rand9=Rand(10,30),
-		rand10=Rand(hi:2*pi),
+		rand1=30, //Rand(30,60),
+		rand2=2, //Rand(hi:2*pi),
+		rand3=60, //Rand(60,120),
+		rand4=2, //Rand(hi:2*pi),
+		rand5=5, //Rand(5,15),
+		rand6=1, //Drand([0,1],inf),
+		rand7=10, //Rand(10,30),
+		rand8=2, //Rand(hi:2*pi),
+		rand9=10, //Rand(10,30),
+		rand10=2, //Rand(hi:2*pi),
 		gate=1;
 		// winPct
 		// variables to store UGens later
@@ -658,6 +658,21 @@ Routine{
 	u.playTape(tape:1,player:3,rate:0.125,db:5,timescale:1.0);
 	u.playTape(tape:1,player:4,rate:2,db:-20,timescale:1.0);
 	u.playTape(tape:1,player:5,rate:40,db:-20,timescale:10.0);
+	0.5.wait;
+  5.do({arg v,i;
+  	i.postln;
+  	u.setR1(tape:1,player:1+i,val:30.rand+60);
+  	u.setR2(tape:1,player:1+i,val:(2*pi).rand);
+  	u.setR3(tape:1,player:1+i,val:60.rand+120);
+  	u.setR4(tape:1,player:1+i,val:(2*pi).rand);
+  	u.setR5(tape:1,player:1+i,val:5.rand+15);
+  	u.setR6(tape:1,player:1+i,val:2.rand);
+  	u.setR7(tape:1,player:1+i,val:10.rand+30);
+  	u.setR8(tape:1,player:1+i,val:(2*pi));
+  	u.setR9(tape:1,player:1+i,val:10.rand+30);
+  	u.setR10(tape:1,player:1+i,val:(2*pi).rand);
+  });
+
 	u.gui;
 }.play;
 )
@@ -674,6 +689,20 @@ Routine {
 	u.playTape(tape:1,player:3,rate:0.125,db:5,timescale:1.0);
 	u.playTape(tape:1,player:4,rate:2,db:-20,timescale:1.0);
 	u.playTape(tape:1,player:5,rate:40,db:-20,timescale:10.0);
+  5.do({arg v,i;
+  	i.postln;
+  	u.setR1(tape:1,player:1+i,val:30.rand+60);
+  	u.setR2(tape:1,player:1+i,val:(2*pi).rand);
+  	u.setR3(tape:1,player:1+i,val:60.rand+120);
+  	u.setR4(tape:1,player:1+i,val:(2*pi).rand);
+  	u.setR5(tape:1,player:1+i,val:5.rand+15);
+  	u.setR6(tape:1,player:1+i,val:2.rand);
+  	u.setR7(tape:1,player:1+i,val:10.rand+30);
+  	u.setR8(tape:1,player:1+i,val:(2*pi));
+  	u.setR9(tape:1,player:1+i,val:10.rand+30);
+  	u.setR10(tape:1,player:1+i,val:(2*pi).rand);
+  });
+
   u.gui;
 }.play;
 )
@@ -687,14 +716,14 @@ u.restartPlayer(tape:1,player:1,val:1);
 // (see the looper SynthDef above for details)
 // each function only applies to a single player (by default there are 5 players running for tape 1)
 u.setR1(tape:1,player:1,val:10); // LFO param for start point (default: `Rand(30,60)`)
-u.setR2(tape:1,player:1,val:1); // LFO param for start point (default: `Rand(hi:2*pi)`)
-u.setR3(tape:1,player:1,val:60); // LFO param for the window length (default: `Rand(60,120)`)
+u.setR2(tape:1,player:1,val:10); // LFO param for start point (default: `Rand(hi:2*pi)`)
+u.setR3(tape:1,player:1,val:1); // LFO param for the window length (default: `Rand(60,120)`)
 u.setR4(tape:1,player:1,val:1); // LFO param for the window length (default: `Rand(hi:2*pi)`)
-u.setR5(tape:1,player:1,val:5); // LFO for switching between forward and reverse (default: `Rand(5,15)`)
+u.setR5(tape:1,player:1,val:1); // LFO for switching between forward and reverse (default: `Rand(5,15)`)
 u.setR6(tape:1,player:1,val:1); // LFO for switching between forward and reverse (default: `Drand([0,1],inf)`)
-u.setR7(tape:1,player:1,val:10); // LFO for the volume (default: `Rand(10,30)`)
+u.setR7(tape:1,player:1,val:1); // LFO for the volume (default: `Rand(10,30)`)
 u.setR8(tape:1,player:1,val:1); // LFO for the volume (default: `Rand(hi:2*pi)`)
-u.setR9(tape:1,player:1,val:10); // LFO for the panning (default: `Rand(10,30)`)
+u.setR9(tape:1,player:1,val:1); // LFO for the panning (default: `Rand(10,30)`)
 u.setR10(tape:1,player:1,val:1); // LFO for the panning (default: `Rand(hi:2*pi)`)
 
 
