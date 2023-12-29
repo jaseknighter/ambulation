@@ -21,7 +21,7 @@ Ube {
 
 		// initialize variables
 		bufs = Dictionary.new();
-		monobufs = Dictionary.new();    
+		monobufs = Dictionary.new();
 		syns = Dictionary.new();
 		oscs = Dictionary.new();
 		windata = Array.newClear(128);
@@ -56,7 +56,7 @@ Ube {
 
 		"done loading.".postln;
 	}
-  
+
 	pauseTape {
 		arg tape=1,player=1;
 		var tapeid="tape"++tape;
@@ -138,7 +138,7 @@ Ube {
         if (monobufs.at(tapeid).isNil,{
           fork{
             ("monobufs is nil. split the stereo file: ").postln;
-            bufl=Buffer.alloc(server, buf.sampleRate*(buf.numFrames/2)); 
+            bufl=Buffer.alloc(server, buf.sampleRate*(buf.numFrames/2));
             bufr=Buffer.alloc(server, buf.sampleRate*(buf.numFrames/2));
             FluidBufCompose.processBlocking(server,source:buf,destination:bufl,startChan:0,numChans:1,action:{
               FluidBufCompose.processBlocking(server,source:buf,destination:bufr,startChan:1,numChans:1,action:{
@@ -172,7 +172,7 @@ Ube {
 			("[ube] mono buffer 0 loaded"+tape+filename).postln;
 		}),Buffer.readChannel(server,filename,channels:1,action:{ arg buf;
 			("[ube] mono buffer 1 loaded"+tape+filename).postln;
-		})]);    
+		})]);
 		bufs.put(tapeid,Buffer.read(server,filename,action:{ arg buf;
 			("[ube] loaded"+tape+filename).postln;
 		}));
@@ -181,7 +181,7 @@ Ube {
 	recordTape {
 		arg tape=1,seconds=30,recLevel=1.0;
 		var tapeid="tape"++tape;
-		("record tape").postln;    
+		("record tape").postln;
 		Buffer.alloc(server,server.sampleRate*seconds,2,{ arg buf;
 			// silence all output to prevent feedback?
 			syns.at("fx").set(\amp,0);
